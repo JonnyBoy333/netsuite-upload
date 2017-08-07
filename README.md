@@ -53,6 +53,7 @@ Right-click the file/folder in the navigation panel to see the options:
 	// Temporary folder (e.g. C:\\temp) - used for storing compared file
 	"netSuiteUpload.tempFolder": "<TEMP FOLDER PATH>"
 
+<<<<<<< HEAD
 	// Oauth Integration Key
 	"netSuiteUpload.netsuite-key": "<INTEGRATION KEY>",
 
@@ -67,6 +68,10 @@ Right-click the file/folder in the navigation panel to see the options:
 
 	// Account number
 	"netSuiteUpload.realm": "<ACCOUNT NUMBER>"
+=======
+	// Base NetSuite folder path to upload script to (e.g. "SuiteScripts/Developer")
+	"netSuiteUpload.rootDirectory": "<BASE FOLDER PATH>"
+>>>>>>> base-directory
 }
 ```
 

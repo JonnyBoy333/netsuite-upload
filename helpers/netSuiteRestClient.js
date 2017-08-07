@@ -4,7 +4,12 @@ let OAuth = require('oauth-1.0a');
 let crypto  = require('crypto');
 
 function getRelativePath(absFilePath) {
-    return absFilePath.slice(vscode.workspace.rootPath.length);
+    var rootDirectory = vscode.workspace.getConfiguration('netSuiteUpload')['rootDirectory'];
+    if (rootDirectory) {
+        return rootDirectory + absFilePath.slice(vscode.workspace.rootPath.length);
+    } else {   
+        return 'SuiteScripts' + absFilePath.slice(vscode.workspace.rootPath.length);
+    }
 }
 
 function getFile(file, callback) {
