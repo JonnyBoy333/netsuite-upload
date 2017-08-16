@@ -38,6 +38,8 @@ define(['N/file', 'N/search', 'N/record'], function (file, search, record) {
         var nextFolders = folderArray.slice(1);
         var filters = [];
 
+        log.debug('First Folder', firstFolder);
+        log.debug('Parent ID', parentId);
         filters.push({ name: 'name', operator: 'is', values: [firstFolder] });
         if (parentId) {
             filters.push({ name: 'parent', operator: 'anyof', values: [parentId] });

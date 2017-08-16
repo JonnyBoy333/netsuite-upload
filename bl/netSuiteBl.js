@@ -32,6 +32,7 @@ function uploadFileToNetSuite(file) {
     
     nsRestClient.postFile(file, fileContent, function(data) {
         if (hasError(data)) return;
+        console.log('Return Data', data.toString());
         
         var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
 
