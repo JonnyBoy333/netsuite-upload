@@ -50,19 +50,60 @@ function deleteFileInNetSuite(file) {
     });
 }
 
+async function getConfigFile(objectPath) {
+    let pathArray = objectPath.split('/');
+    pathArray.pop();
+    let len = pathArray.length;
+    let configFile = {};
+
+    function checkForFile(directory) {
+        return new Promise(function(resolve) {
+            fs.stat(directory + '/.nsupload.json', function(err, stat) {
+                if(err == null) {
+                    console.log('Found File', directory);
+                    fs.readFile(directory + '/.nsupload.json', function(err, data) {
+                        configFile = {
+                            options: JSON5.parse(data),
+                            getConfiguration: function(prop) {
+                                configObj = {};
+                                configObj[prop] = this.options[prop];
+                                return this.options;
+                            }
+                        };
+                        resolve(configFile);
+                    });
+                } else {
+                    resolve({});
+                }
+            });
+        })
+    }
+
+    for (let i = 0; i < len - 1; i++) {
+        let directory = pathArray.join('/');
+        configFile = await checkForFile(directory);
+        if (Object.keys(configFile).length > 0) break;
+        pathArray.pop();
+    }
+    return Object.keys(configFile).length > 0 ? configFile : vscode.workspace;
+}
+
 function previewFileFromNetSuite(file) {
     nsRestClient.getFile(file, function(data) {
         if (hasError(data, 'File does not exist in NetSuite')) return;
         
-        var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
-        var tempFolder = vscode.workspace.getConfiguration('netSuiteUpload')['tempFolder'];
-        var filePathArray = (relativeFileName.split('.')[0] + '.preview.' + relativeFileName.split('.')[1]).split('\\');
-        var newPreviewFile = tempFolder + '\\' + filePathArray[filePathArray.length-1];
+        getConfigFile(file.fsPath)
+        .then(configFile => {
+            var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
+            var tempFolder = configFile.getConfiguration('netSuiteUpload')['tempFolder'];
+            var filePathArray = (relativeFileName.split('.')[0] + '.preview.' + relativeFileName.split('.')[1]).split('\\');
+            var newPreviewFile = tempFolder + '\\' + filePathArray[filePathArray.length-1];
 
-        fs.writeFile(newPreviewFile, data[0].content.toString());
+            fs.writeFile(newPreviewFile, data[0].content.toString());
 
-        var nsFile = vscode.Uri.file(newPreviewFile);
-        vscode.commands.executeCommand('vscode.diff', file, nsFile, 'Local <--> NetSuite');
+            var nsFile = vscode.Uri.file(newPreviewFile);
+            vscode.commands.executeCommand('vscode.diff', file, nsFile, 'Local <--> NetSuite');
+        })
     });
 }
 

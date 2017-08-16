@@ -21,14 +21,12 @@ async function getConfigFile(objectPath) {
     let len = pathArray.length;
     let configFile = {};
 
-    console.log('Path Array', pathArray);
     function checkForFile(directory) {
         return new Promise(function(resolve) {
             fs.stat(directory + '/.nsupload.json', function(err, stat) {
                 if(err == null) {
                     console.log('Found File', directory);
                     fs.readFile(directory + '/.nsupload.json', function(err, data) {
-                        //console.log('File Data', data);
                         configFile = {
                             options: JSON5.parse(data),
                             getConfiguration: function(prop) {
@@ -48,7 +46,6 @@ async function getConfigFile(objectPath) {
 
     for (let i = 0; i < len - 1; i++) {
         let directory = pathArray.join('/');
-        console.log('Directory', directory);
         configFile = await checkForFile(directory);
         if (Object.keys(configFile).length > 0) break;
         pathArray.pop();
@@ -59,19 +56,22 @@ async function getConfigFile(objectPath) {
 function getData(type, objectPath, callback) {
     var relativeName = getRelativePath(objectPath);
     
-    var client = new RestClient();
-    var args = {
-        path: { name: relativeName },
-        headers: {                
-            "Content-Type": "application/json",
-            "Authorization": vscode.workspace.getConfiguration('netSuiteUpload')['authentication']
-        }
-    };
+    getConfigFile(objectPath)
+    .then(configFile => {
+        var client = new RestClient();
+        var args = {
+            path: { name: relativeName },
+            headers: {                
+                "Content-Type": "application/json",
+                "Authorization": configFile.getConfiguration('netSuiteUpload')['authentication']
+            }
+        };
 
-    var baseRestletURL = vscode.workspace.getConfiguration('netSuiteUpload')['restlet'];
-    client.get(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
-        callback(data);
-    });
+        var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
+        client.get(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
+            callback(data);
+        });
+    })
 }
 
 function postFile(file, content, callback) {
@@ -83,7 +83,6 @@ function postData(type, objectPath, content, callback) {
     getConfigFile(objectPath)
     .then(configFile => {
         console.log('Config File', configFile);
-        console.log('Realm', configFile.getConfiguration('netSuiteUpload')['realm']);
         var relativeName = getRelativePath(objectPath);
         
         var client = new RestClient();
@@ -112,20 +111,24 @@ function deleteFile(file, callback) {
 
 function deletetData(type, objectPath, callback) {
     var relativeName = getRelativePath(objectPath);
-    
-    var client = new RestClient();
-    var args = {
-        path: { name: relativeName },
-        headers: {                
-            "Content-Type": "application/json",
-            "Authorization": vscode.workspace.getConfiguration('netSuiteUpload')['authentication']
-        }
-    };
+    getConfigFile(objectPath)
+    .then(configFile => {
+        console.log('Config File', configFile);
+        var client = new RestClient();
+        var args = {
+            path: { name: relativeName },
+            headers: {                
+                "Content-Type": "application/json",
+                "Authorization": configFile.getConfiguration('netSuiteUpload')['authentication']
+            }
+        };
 
-    var baseRestletURL = vscode.workspace.getConfiguration('netSuiteUpload')['restlet'];
-    client.delete(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
-        callback(data);
-    });
+        var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
+        client.delete(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
+            callback(data);
+        });
+    })
+    
 }
 
 exports.getRelativePath = getRelativePath;
