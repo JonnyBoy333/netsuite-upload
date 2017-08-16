@@ -5,12 +5,13 @@ let crypto  = require('crypto');
 let fs = require('fs');
 let JSON5 = require('json5');
 
-function getRelativePath(absFilePath) {
+function getRelativePath(absFilePath, configFile) {
     var rootDirectory = configFile.getConfiguration('netSuiteUpload')['rootDirectory'];
+    console.log('Root Directory', rootDirectory);
     if (rootDirectory) {
-        return rootDirectory + absFilePath.slice(configFile.rootPath.length);
+        return rootDirectory + absFilePath.slice(vscode.workspace.rootPath.length);
     } else {   
-        return 'SuiteScripts' + absFilePath.slice(configFile.rootPath.length);
+        return 'SuiteScripts' + absFilePath.slice(vscode.workspace.rootPath.length);
     }
 }
 
@@ -64,7 +65,7 @@ function getData(type, objectPath, callback) {
     
     getConfigFile(objectPath)
     .then(configFile => {
-        var relativeName = getRelativePath(objectPath);
+        var relativeName = getRelativePath(objectPath, configFile);
         var client = new RestClient();
         var args = {
             path: { name: relativeName },
@@ -74,34 +75,36 @@ function getData(type, objectPath, callback) {
             }
         };
 
-    var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
+        var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
 
-    // Support for Oath authentication
-    if (!args.headers.Authorization) {   
-        var oauth = OAuth({
-            consumer: {
-                key: configFile.getConfiguration('netSuiteUpload')['netsuite-key'],
-                secret: configFile.getConfiguration('netSuiteUpload')['netsuite-secret']
-            },
-            signature_method: 'HMAC-SHA1',
-            hash_function: function(base_string, key) {
-                return crypto.createHmac('sha1', key).update(base_string).digest('base64');
-            }
+        // Support for Oath authentication
+        if (!args.headers.Authorization) {   
+            var oauth = OAuth({
+                consumer: {
+                    key: configFile.getConfiguration('netSuiteUpload')['netsuite-key'],
+                    secret: configFile.getConfiguration('netSuiteUpload')['netsuite-secret']
+                },
+                signature_method: 'HMAC-SHA1',
+                hash_function: function(base_string, key) {
+                    return crypto.createHmac('sha1', key).update(base_string).digest('base64');
+                }
+            });
+            var token = {
+                key: configFile.getConfiguration('netSuiteUpload')['consumer-token'],
+                secret: configFile.getConfiguration('netSuiteUpload')['consumer-secret']
+            };
+            var headerWithRealm = oauth.toHeader(oauth.authorize({ url: baseRestletURL, method: 'POST' }, token));
+            headerWithRealm.Authorization += ', realm="' + configFile.getConfiguration('netSuiteUpload')['realm'] + '"';
+            headerWithRealm['Content-Type'] = 'application/json';
+            args.headers = headerWithRealm;
+        }
+
+        var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
+        console.log('Restlet URL', baseRestletURL);
+        client.get(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
+            console.log('Return Data from Restlet', data);
+            callback(data);
         });
-        var token = {
-            key: configFile.getConfiguration('netSuiteUpload')['consumer-token'],
-            secret: configFile.getConfiguration('netSuiteUpload')['consumer-secret']
-        };
-        var headerWithRealm = oauth.toHeader(oauth.authorize({ url: baseRestletURL, method: 'POST' }, token));
-        headerWithRealm.Authorization += ', realm="' + configFile.getConfiguration('netSuiteUpload')['realm'] + '"';
-        headerWithRealm['Content-Type'] = 'application/json';
-        args.headers = headerWithRealm;
-    }
-
-    var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
-    client.get(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
-        callback(data);
-    });
     })
 }
 
@@ -113,7 +116,8 @@ function postData(type, objectPath, content, callback) {
     console.log('Posting file', '<-----------');
     getConfigFile(objectPath)
     .then(configFile => {
-        var relativeName = getRelativePath(objectPath);
+        console.log('Config File', configFile);
+        var relativeName = getRelativePath(objectPath, configFile);
         
         var client = new RestClient();
         var args = {
@@ -151,7 +155,9 @@ function postData(type, objectPath, content, callback) {
             headerWithRealm['Content-Type'] = 'application/json';
             args.headers = headerWithRealm;
         }
+        console.log('Post Arguments', args);
         client.post(baseRestletURL, args, function (data) {
+            console.log('Return Data from Post', data);
             callback(data);
         });
     })
@@ -164,7 +170,7 @@ function deleteFile(file, callback) {
 function deletetData(type, objectPath, callback) {
     getConfigFile(objectPath)
     .then(configFile => {
-        var relativeName = getRelativePath(objectPath);
+        var relativeName = getRelativePath(objectPath, configFile);
         console.log('Config File', configFile);
         var client = new RestClient();
         var args = {
