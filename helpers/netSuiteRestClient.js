@@ -79,6 +79,7 @@ function postFile(file, content, callback) {
 }
 
 function postData(type, objectPath, content, callback) {
+    console.log('Posting file', '<-----------');
     getConfigFile(objectPath)
     .then(configFile => {
         console.log('Config File', configFile);
