@@ -57,12 +57,14 @@ define(['N/file', 'N/search', 'N/record'], function (file, search, record) {
             folderId = result.id;
             return false;
         });
+        log.debug('Folder ID', folderId);
 
         if (!folderId) {
             var folderRecord = record.create({ type: record.Type.FOLDER });
             folderRecord.setValue({ fieldId: 'name', value: firstFolder });
             folderRecord.setValue({ fieldId: 'parent', value: parentId });
             folderId = folderRecord.save();
+            log.debug('Saved Folder', folderId);
         }
 
         if (!nextFolders || nextFolders.length == 0) return folderId;
@@ -166,7 +168,8 @@ define(['N/file', 'N/search', 'N/record'], function (file, search, record) {
             folder: existingFile.folder,
             isOnline: existingFile.isOnline
         });
-        fileObj.save();
+        var submitted = fileObj.save();
+        log.debug('Submitted File', submitted);
     }
 
     function createFile(filePath, content) {
@@ -182,6 +185,8 @@ define(['N/file', 'N/search', 'N/record'], function (file, search, record) {
             folder: folder
         });
         fileObj.save();
+        var submitted = fileObj.save();
+        log.debug('Submitted File', submitted);
     }
 
     function getFileType(fileName) {
@@ -193,6 +198,8 @@ define(['N/file', 'N/search', 'N/record'], function (file, search, record) {
 
     function postFile(relFilePath, content) {
         var fullFilePath = relFilePath;
+        log.debug('Relative Path', fullFilePath);
+        log.debug('Content', content);
 
         try {
             var loadedFile = file.load({
@@ -209,6 +216,7 @@ define(['N/file', 'N/search', 'N/record'], function (file, search, record) {
     }
 
     function deleteFile(relFilePath) {
+        log.debug('Delete', '<--------------');
         var fullFilePath = relFilePath;
 
         var fileObject = file.load({ id: fullFilePath });
@@ -216,19 +224,24 @@ define(['N/file', 'N/search', 'N/record'], function (file, search, record) {
     }
 
     function getFunc(request) {
+        log.debug('Get', '<--------------');
         var type = request.type; // directory, file
+        log.debug('File Type', type);
         var relPath = request.name.split('\\').join('/');
         // TODO: fix request.name == EMPTY STRING
 
         if (type === 'file') {
+            log.debug('File', getFile(relPath));
             return getFile(relPath);
         }
         if (type === 'directory') {
+            log.debug('Directory', getDirectory(relPath));
             return getDirectory(relPath);
         }
     }
 
     function postFunc(request) {
+        log.debug('Post', '<--------------');
         var relPath = request.name.split('\\').join('/');
         
         postFile(relPath, request.content);
