@@ -9,7 +9,7 @@ let _ = require('underscore');
 
 function hasError(data, message) {
     if (data.error) {
-        var errorMessage = message ? message : JSON.parse(data.error.message).message;
+        var errorMessage = message ? message : data.error.message;
         vscode.window.showErrorMessage(errorMessage);
         return true;
     }
@@ -18,12 +18,21 @@ function hasError(data, message) {
 
 function downloadFileFromNetSuite(file) {
     nsRestClient.getFile(file, function(data) {
+        console.log('Data', data);
         if (hasError(data)) return;
-        
-        var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
-        
-        fs.writeFile(file.fsPath, data[0].content.toString());
-        vscode.window.showInformationMessage('File "' + relativeFileName + '" downloaded.');
+
+        nsRestClient.getConfigFile(file.fsPath)
+        .then(configFile => {
+                var relativeFileName = nsRestClient.getRelativePath(file.fsPath, configFile);
+                
+                console.log('File Path', file.fsPath);
+                console.log('Content', data[0].content.toString());
+                fs.writeFile(file.fsPath, data[0].content.toString());
+                vscode.window.showInformationMessage('File "' + relativeFileName + '" downloaded.');
+        })
+        .catch(err => {
+            vscode.window.showErrorMessage(err);
+        });
     });
 }
 
@@ -32,69 +41,45 @@ function uploadFileToNetSuite(file) {
     
     nsRestClient.postFile(file, fileContent, function(data) {
         if (hasError(data)) return;
-        console.log('Return Data', data.toString());
-        
-        var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
 
-        vscode.window.showInformationMessage('File "' + relativeFileName + '" uploaded.');
+        nsRestClient.getConfigFile(file.fsPath)
+        .then(configFile => {
+            var relativeFileName = nsRestClient.getRelativePath(file.fsPath, configFile);
+            console.log('Relative Name', relativeFileName);
+    
+            vscode.window.showInformationMessage('File "' + relativeFileName + '" uploaded successfully.');
+        })
+        .catch(err => {
+            vscode.window.showErrorMessage(err);
+        });
     });
 }
 
 function deleteFileInNetSuite(file) {
     nsRestClient.deleteFile(file, function(data) {
         if (hasError(data)) return;
-        
-        var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
 
-        vscode.window.showInformationMessage('File "' + relativeFileName + '" deleted.');
-    });
-}
+        nsRestClient.getConfigFile(file.fsPath)
+        .then(configFile => {
 
-async function getConfigFile(objectPath) {
-    let pathArray = objectPath.split('/');
-    pathArray.pop();
-    let len = pathArray.length;
-    let configFile = {};
-
-    function checkForFile(directory) {
-        return new Promise(function(resolve) {
-            fs.stat(directory + '/.nsupload.json', function(err, stat) {
-                if(err == null) {
-                    console.log('Found File', directory);
-                    fs.readFile(directory + '/.nsupload.json', function(err, data) {
-                        configFile = {
-                            options: JSON5.parse(data),
-                            getConfiguration: function(prop) {
-                                configObj = {};
-                                configObj[prop] = this.options[prop];
-                                return this.options;
-                            }
-                        };
-                        resolve(configFile);
-                    });
-                } else {
-                    resolve({});
-                }
-            });
+            var relativeFileName = nsRestClient.getRelativePath(file.fsPath, configFile);
+    
+            vscode.window.showInformationMessage('File "' + relativeFileName + '" deleted.');
         })
-    }
-
-    for (let i = 0; i < len - 1; i++) {
-        let directory = pathArray.join('/');
-        configFile = await checkForFile(directory);
-        if (Object.keys(configFile).length > 0) break;
-        pathArray.pop();
-    }
-    return Object.keys(configFile).length > 0 ? configFile : vscode.workspace;
+        .catch(err => {
+            vscode.window.showErrorMessage(err);
+        });
+    });
 }
 
 function previewFileFromNetSuite(file) {
     nsRestClient.getFile(file, function(data) {
         if (hasError(data, 'File does not exist in NetSuite')) return;
+        console.log('File', file);
         
-        getConfigFile(file.fsPath)
+        nsRestClient.getConfigFile(file.fsPath)
         .then(configFile => {
-            var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
+            var relativeFileName = nsRestClient.getRelativePath(file.fsPath, configFile);
             var tempFolder = configFile.getConfiguration('netSuiteUpload')['tempFolder'];
             var filePathArray = (relativeFileName.split('.')[0] + '.preview.' + relativeFileName.split('.')[1]).split('\\');
             var newPreviewFile = tempFolder + '\\' + filePathArray[filePathArray.length-1];
@@ -104,6 +89,9 @@ function previewFileFromNetSuite(file) {
             var nsFile = vscode.Uri.file(newPreviewFile);
             vscode.commands.executeCommand('vscode.diff', file, nsFile, 'Local <--> NetSuite');
         })
+        .catch(err => {
+            vscode.window.showErrorMessage(err);
+        });
     });
 }
 
@@ -139,19 +127,25 @@ function createDirectoryIfNotExist(filePath) {
 
 function addCustomDependencyToActiveFile(editor) {
     uiHelper.askForCustomDependency()
-        .then(values => {
-            addDependency(editor, values.depPath, values.depParam);            
-        })
+    .then(values => {
+        addDependency(editor, values.depPath, values.depParam);            
+    })
+    .catch(err => {
+        vscode.window.showErrorMessage(err);
+    });
 }
 
 function addNetSuiteDependencyToActiveFile(editor) {
     let netsuiteLibs = netsuiteList.getSuiteScriptDependecies();
 
     uiHelper.showListOfNetSuiteDependecies(_.pluck(netsuiteLibs, 'path'))
-        .then(value => {
-            var depRecord = _.findWhere(netsuiteLibs, { path: value });
-            addDependency(editor, depRecord.path, depRecord.param);
+    .then(value => {
+        var depRecord = _.findWhere(netsuiteLibs, { path: value });
+        addDependency(editor, depRecord.path, depRecord.param);
     })
+    .catch(err => {
+        vscode.window.showErrorMessage(err);
+    });
 }
 
 function addDependency(editor, pathText, paramText) {
