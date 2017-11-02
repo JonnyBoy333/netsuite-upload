@@ -86,12 +86,17 @@ function getData(type, objectPath, callback) {
     
     getConfigFile(objectPath)
     .then(configFile => {
+        if (Object.keys(configFile).length === 0) {
+            console.log('No config file found');
+        }
         var relativeName = getRelativePath(objectPath, configFile);
         var client = new RestClient();
+        var authentication = configFile.getConfiguration('netSuiteUpload')['authentication'];
+        console.log('Authentication', authentication);
         var args = {
             path: { name: relativeName },
             headers: {                
-                "Authorization": configFile.getConfiguration('netSuiteUpload')['authentication']
+                "Authorization": authentication
             }
         };
 
@@ -102,7 +107,16 @@ function getData(type, objectPath, callback) {
             args.headers = getOauthHeader(configFile, 'GET');
         }
 
+        if (!args.headers.Authorization) {
+            vscode.window.showErrorMessage('No authentication setting found.');
+            return;
+        }
+
         var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
+        if (!baseRestletURL) {
+            vscode.window.showErrorMessage('No Restlet URL setting found.');
+            return;
+        }
         console.log('Restlet URL', baseRestletURL);
         console.log('Get Args', args);
         client.get(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
@@ -128,10 +142,12 @@ function postData(type, objectPath, content, callback) {
         console.log('Relative Name', relativeName);
         
         var client = new RestClient();
+        var authentication = configFile.getConfiguration('netSuiteUpload')['authentication'];
+        console.log('Authentication', authentication);
         var args = {
             headers: {                
                 "Content-Type": "application/json",
-                "Authorization": configFile.getConfiguration('netSuiteUpload')['authentication']
+                "Authorization": authentication
             },
             data: {
                 type: 'file',
@@ -141,6 +157,10 @@ function postData(type, objectPath, content, callback) {
         };
         
         var baseRestletURL = configFile.getConfiguration('netSuiteUpload')['restlet'];
+        if (!baseRestletURL) {
+            vscode.window.showErrorMessage('No Restlet URL setting found.');
+            return;
+        }
 
         // Support for Oath authentication
         if (!args.headers.Authorization) {
@@ -148,6 +168,10 @@ function postData(type, objectPath, content, callback) {
         }
         console.log('Restlet URL', baseRestletURL);
         console.log('Post Args', args);
+        if (!args.headers.Authorization) {
+            vscode.window.showErrorMessage('No authentication setting found.');
+            return;
+        }
         client.post(baseRestletURL, args, function (data) {
             console.log('Return Post Data from Restlet', data);
             callback(data);
@@ -181,6 +205,11 @@ function deletetData(type, objectPath, callback) {
         // Support for Oath authentication
         if (!args.headers.Authorization) {    
             args.headers = getOauthHeader(configFile, 'DELETE');
+        }
+
+        if (!args.headers.Authorization) {
+            vscode.window.showErrorMessage('No authentication setting found.');
+            return;
         }
 
         client.delete(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
