@@ -23,17 +23,20 @@ function getDirectory(directory, callback) {
 }
 
 async function getConfigFile(objectPath) {
-    let pathArray = objectPath.split('/');
+    const slash = objectPath.indexOf('/') === 0 ? '/' : '\\';
+    console.log('Object Path', objectPath);
+    // console.log('URI Encoded Object Path', vscode.Uri.parse(objectPath));
+    let pathArray = objectPath.split(slash);
     pathArray.pop();
     let len = pathArray.length;
     let configFile = {};
 
     function checkForFile(directory) {
         return new Promise(function(resolve) {
-            fs.stat(directory + '/.nsupload.json', function(err, stat) {
+            fs.stat(directory + slash + '.nsupload.json', function(err, stat) {
                 if(err == null) {
                     console.log('Found File', directory);
-                    fs.readFile(directory + '/.nsupload.json', function(err, data) {
+                    fs.readFile(directory + slash + '.nsupload.json', function(err, data) {
                         configFile = {
                             options: JSON5.parse(data),
                             getConfiguration: function(prop) {
@@ -51,7 +54,7 @@ async function getConfigFile(objectPath) {
     }
 
     for (let i = 0; i < len - 1; i++) {
-        let directory = pathArray.join('/');
+        let directory = pathArray.join(slash);
         configFile = await checkForFile(directory);
         if (Object.keys(configFile).length > 0) break;
         pathArray.pop();
