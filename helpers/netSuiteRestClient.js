@@ -17,7 +17,7 @@ function getDirectory(directory, callback) {
 
 function getData(type, objectPath, callback) {
     var relativeName = getRelativePath(objectPath);
-    var queryString  = '&type=' + type + '&name='+vscode.workspace.getConfiguration('netSuiteUpload')['rootDirectory']+relativeName;
+    var queryString  = '&type=' + type + '&name='+relativeName;
     
     var client = new RestClient();
 
