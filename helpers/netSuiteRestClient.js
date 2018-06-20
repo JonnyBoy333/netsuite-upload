@@ -17,13 +17,15 @@ function getDirectory(directory, callback) {
 
 function getData(type, objectPath, callback) {
     var relativeName = getRelativePath(objectPath);
+    var queryString  = '&type=' + type + '&name='+vscode.workspace.getConfiguration('netSuiteUpload')['rootDirectory']+relativeName;
     
     var client = new RestClient();
+
     var args = {
-        path: { name: relativeName },
         headers: {                
-            "Content-Type": "application/json",
-            "Authorization": vscode.workspace.getConfiguration('netSuiteUpload')['authentication']
+            "Authorization": vscode.workspace.getConfiguration('netSuiteUpload')['authentication'],
+            "Accept": "*/*",
+            "Content-Type": "application/json"
         }
     };
 
@@ -51,7 +53,7 @@ function getData(type, objectPath, callback) {
         args.headers = headerWithRealm;
     }
 
-    client.get(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
+    client.get(baseRestletURL+queryString, args, function (data) {
         callback(data);
     });
 }
