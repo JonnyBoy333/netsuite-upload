@@ -59,7 +59,7 @@ function getData(type, objectPath, callback) {
 }
 
 function postFile(file, content, callback) {
-    postData('file', file.fsPath, content, callback);
+    callback(postData('file', file.fsPath, content, callback));
 }
 
 function postData(type, objectPath, content, callback) {
@@ -101,13 +101,14 @@ function postData(type, objectPath, content, callback) {
         headerWithRealm['Content-Type'] = 'application/json';
         args.headers = headerWithRealm;
     }
+
     client.post(baseRestletURL, args, function (data) {
         callback(data);
     });
 }
 
 function deleteFile(file, callback) {
-    deletetData('file', file.fsPath, callback);
+    callback(deletetData('file', file.fsPath, callback));
 }
 
 function deletetData(type, objectPath, callback) {
