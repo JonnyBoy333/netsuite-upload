@@ -17,13 +17,15 @@ function getDirectory(directory, callback) {
 
 function getData(type, objectPath, callback) {
     var relativeName = getRelativePath(objectPath);
+    var queryString  = '&type=' + type + '&name='+relativeName;
     
     var client = new RestClient();
+
     var args = {
-        path: { name: relativeName },
         headers: {                
-            "Content-Type": "application/json",
-            "Authorization": vscode.workspace.getConfiguration('netSuiteUpload')['authentication']
+            "Authorization": vscode.workspace.getConfiguration('netSuiteUpload')['authentication'],
+            "Accept": "*/*",
+            "Content-Type": "application/json"
         }
     };
 
@@ -51,13 +53,13 @@ function getData(type, objectPath, callback) {
         args.headers = headerWithRealm;
     }
 
-    client.get(baseRestletURL + '&type=' + type + '&name=${name}', args, function (data) {
+    client.get(baseRestletURL+queryString, args, function (data) {
         callback(data);
     });
 }
 
 function postFile(file, content, callback) {
-    postData('file', file.fsPath, content, callback);
+    callback(postData('file', file.fsPath, content, callback));
 }
 
 function postData(type, objectPath, content, callback) {
@@ -99,13 +101,14 @@ function postData(type, objectPath, content, callback) {
         headerWithRealm['Content-Type'] = 'application/json';
         args.headers = headerWithRealm;
     }
+
     client.post(baseRestletURL, args, function (data) {
         callback(data);
     });
 }
 
 function deleteFile(file, callback) {
-    deletetData('file', file.fsPath, callback);
+    callback(deletetData('file', file.fsPath, callback));
 }
 
 function deletetData(type, objectPath, callback) {

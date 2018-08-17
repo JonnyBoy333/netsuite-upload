@@ -8,11 +8,13 @@ let netsuiteList = require('../helpers/netsuiteList');
 let _ = require('underscore');
 
 function hasError(data, message) {
-    if (data.error) {
+    if (data != undefined && data.error) {
         var errorMessage = message ? message : JSON.parse(data.error.message).message;
         vscode.window.showErrorMessage(errorMessage);
+        
         return true;
     }
+
     return false;
 }
 
@@ -29,10 +31,10 @@ function downloadFileFromNetSuite(file) {
 
 function uploadFileToNetSuite(file) {
     var fileContent = fs.readFileSync(file.fsPath, 'utf8');
-    
+    console.log('Post File');
     nsRestClient.postFile(file, fileContent, function(data) {
-        if (hasError(data)) return;
-        
+        if (hasError(data)){return};
+
         var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
 
         vscode.window.showInformationMessage('File "' + relativeFileName + '" uploaded.');
@@ -45,7 +47,7 @@ function deleteFileInNetSuite(file) {
         
         var relativeFileName = nsRestClient.getRelativePath(file.fsPath);
 
-        vscode.window.showInformationMessage('File "' + relativeFileName + '" deleted.');
+        vscode.window.showInformationMessage('File "' + relativeFileName + '" deleted from NetSuite.');
     });
 }
 
